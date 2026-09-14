@@ -73,6 +73,165 @@ Task ID to complete: 1
 
 3. **Data Persistence**: All tasks are stored in `tasks.json` in the same directory.
 
+## Architecture
+
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      AI TASK AGENT SYSTEM                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
+│  │   User       │◄──►│  TaskAgent   │◄──►│  Scheduler   │       │
+│  │  Interface   │    │   Core       │    │   Engine     │       │
+│  └──────────────┘    └──────────────┘    └──────────────┘       │
+│         │                   │                   │                │
+│         │                   ▼                   │                │
+│         │            ┌──────────────┐          │                │
+│         │            │   Task       │          │                │
+│         │            │   Manager    │          │                │
+│         │            └──────────────┘          │                │
+│         │                   │                   │                │
+│         ▼                   ▼                   ▼                │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │              tasks.json (Persistent Storage)             │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Component Architecture
+
+#### 1. **TaskAgent Class** (Core Controller)
+The main orchestrator that coordinates all components.
+
+**Responsibilities:**
+- Initialize and manage task data
+- Coordinate between user input, scheduler, and storage
+- Handle daily reset logic
+- Manage agent lifecycle (start/stop)
+
+**Key Methods:**
+- `__init__()`: Initialize agent and load tasks
+- `start()`: Launch interactive mode with background scheduler
+- `reset_daily_tasks()`: Clear tasks for new day
+
+#### 2. **User Interface Module** (Interactive Layer)
+Handles all user interactions through CLI.
+
+**Responsibilities:**
+- Display menus and prompts
+- Collect task input (name, deadline)
+- Show task lists and reminders
+- Process user commands
+
+**Commands Supported:**
+- `a/add`: Add new task
+- `v/view`: Display all tasks
+- `c/complete`: Mark task complete
+- `r/remind`: Trigger immediate reminder
+- `q/quit/exit`: Exit agent
+
+#### 3. **Scheduler Engine** (Time-Based Automation)
+Background thread that runs continuously for automated reminders.
+
+**Responsibilities:**
+- Monitor system time every 60 seconds
+- Trigger 9 AM morning check-in
+- Execute bi-hourly reminders (10, 12, 14, 16, 18, 20, 22)
+- Prevent duplicate reminders per hour
+
+**Schedule:**
+```
+09:00 → Morning task collection
+10:00 → Reminder check
+12:00 → Reminder check
+14:00 → Reminder check
+16:00 → Reminder check
+18:00 → Reminder check
+20:00 → Reminder check
+22:00 → Reminder check
+```
+
+#### 4. **Task Manager** (Business Logic)
+Handles task operations and urgency calculations.
+
+**Responsibilities:**
+- Add tasks with deadline parsing
+- Calculate time until deadline
+- Filter tasks due within 2-hour window
+- Sort by urgency
+- Mark tasks as complete
+
+**Urgency Levels:**
+- 🚨 OVERDUE: Deadline passed
+- ⚠️ Minutes left: < 1 hour remaining
+- ⏳ Hours remaining: 1-2 hours left
+
+#### 5. **Data Persistence Layer** (Storage)
+JSON-based file storage for task data.
+
+**File Structure (`tasks.json`):**
+```json
+{
+  "date": "2024-01-15",
+  "daily_tasks": [
+    {
+      "id": 1,
+      "name": "Finish project report",
+      "deadline": "2024-01-15 17:00",
+      "deadline_display": "17:00",
+      "completed": false,
+      "created_at": "2024-01-15 09:30:45"
+    }
+  ]
+}
+```
+
+**Operations:**
+- `load_tasks()`: Read from JSON file on startup
+- `save_tasks()`: Write to JSON file after modifications
+- Auto-create file if not exists
+
+### Data Flow
+
+```
+User Input → TaskAgent.add_task() → Task Validation → 
+JSON Storage → Scheduler Monitor → Time Check → 
+Reminder Trigger → Urgency Calculation → User Notification
+```
+
+### Threading Model
+
+```
+Main Thread (Interactive CLI)
+    │
+    ├── User Command Loop (blocking I/O)
+    │
+    └── Background Scheduler Thread (daemon)
+            │
+            └── While running:
+                    - Sleep 60s
+                    - Check time conditions
+                    - Trigger reminders if needed
+```
+
+### Time Handling Logic
+
+1. **Daily Reset**: Compare current date with stored date
+2. **Morning Check**: Trigger at hour == 9 on new days
+3. **Bi-hourly Reminders**: Trigger when `hour % 2 == 0` and hour ∈ [10,22]
+4. **Deadline Parsing**: Convert HH:MM to datetime with today's date
+5. **Overnight Deadlines**: If deadline < now, assume tomorrow
+
+### Error Handling
+
+- Invalid time formats caught with ValueError
+- Missing task IDs handled gracefully
+- File I/O errors managed with Path.exists() checks
+- Thread safety via sequential JSON operations
+
 ## Files
 
 - `task_agent.py` - Main agent script
