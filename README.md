@@ -232,6 +232,240 @@ Main Thread (Interactive CLI)
 - File I/O errors managed with Path.exists() checks
 - Thread safety via sequential JSON operations
 
+## Deployment Options
+
+### 🖥️ Desktop/Laptop (Recommended)
+Perfect for running while you work at your computer.
+
+```bash
+python3 task_agent.py
+```
+
+**Pros:** Full terminal experience, easy to modify, no battery concerns
+**Cons:** Only works when computer is on and script is running
+
+### 📱 Mobile Deployment
+
+While this agent is designed for terminal environments, here are your options for mobile use:
+
+#### Option 1: Termux (Android) - Most Direct
+Run the Python script directly on Android using Termux.
+
+**Steps:**
+1. Install **Termux** from F-Droid or Play Store
+2. Open Termux and run:
+   ```bash
+   pkg update && pkg upgrade
+   pkg install python
+   ```
+3. Transfer `task_agent.py` to your phone (via git clone, scp, or manual copy)
+4. Run:
+   ```bash
+   python task_agent.py
+   ```
+
+**Limitations:**
+- Terminal must stay open for reminders to work
+- Battery optimization may kill the process
+- No notifications when app is closed
+
+---
+
+#### Option 2: Cloud Server + Telegram (RECOMMENDED) ✅
+
+This version runs 24/7 on a cloud server and sends notifications directly to your phone via Telegram.
+
+**Files Created:**
+- `task_agent_telegram.py` - Telegram-integrated agent
+- `requirements.txt` - Python dependencies
+- `.env.example` - Environment variables template
+
+**Setup Instructions:**
+
+**Step 1: Create Telegram Bot**
+1. Open Telegram and search for `@BotFather`
+2. Send `/newbot` command
+3. Follow prompts to name your bot (e.g., "MyTaskAgent")
+4. **Save the API Token** (looks like: `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`)
+
+**Step 2: Get Your Chat ID**
+1. Search for `@userinfobot` in Telegram
+2. Start the bot and it will reply with your Chat ID
+3. **Save your Chat ID** (looks like: `123456789`)
+
+**Step 3: Choose Cloud Platform (Free Options)**
+
+**A. Replit (Easiest)**
+```bash
+# 1. Create account at https://replit.com
+# 2. Create new Python repl
+# 3. Upload task_agent_telegram.py and requirements.txt
+# 4. Add Secrets (Environment Variables):
+#    - TELEGRAM_BOT_TOKEN = your_bot_token
+#    - TELEGRAM_CHAT_ID = your_chat_id
+# 5. Click "Run"
+# 6. Use "Always On" feature (requires Hacker plan) or use uptime robot
+```
+
+**B. Render.com (Free Tier)**
+```bash
+# 1. Create account at https://render.com
+# 2. Create new "Web Service"
+# 3. Connect your GitHub repo
+# 4. Set environment variables in dashboard
+# 5. Deploy!
+```
+
+**C. Railway.app (Free Tier)**
+```bash
+# 1. Create account at https://railway.app
+# 2. New Project → Deploy from GitHub
+# 3. Add environment variables
+# 4. Deploy
+```
+
+**D. Google Cloud Run / AWS Lambda / Azure Functions**
+- More complex but generous free tiers
+- Requires containerization or serverless setup
+
+**Step 4: Configure Environment Variables**
+```bash
+# On your cloud platform, set:
+TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_CHAT_ID=123456789
+```
+
+**Step 5: Test It Locally First**
+```bash
+export TELEGRAM_BOT_TOKEN="your_token"
+export TELEGRAM_CHAT_ID="your_chat_id"
+pip install -r requirements.txt
+python task_agent_telegram.py
+```
+
+You should receive a startup message on Telegram!
+
+**How It Works:**
+- **9:00 AM**: Bot messages you asking for today's tasks
+- **You Reply**: Send tasks in format: `Task Name - HH:MM`
+- **10 AM, 12 PM, 2 PM, 4 PM, 6 PM, 8 PM, 10 PM**: Automatic reminders
+- **10:00 PM**: Daily summary of completed vs pending tasks
+
+**Example Interaction:**
+```
+Bot (9:00 AM):
+☀️ Good Morning! It's 9:00 AM.
+📝 What are your tasks for today?
+
+You:
+Team meeting - 10:00
+Submit report - 14:30
+Call client - 16:00
+Gym - 18:00
+
+Bot:
+✅ Task Added!
+📌 Team meeting
+⏰ Deadline: 10:00 AM
+
+Bot (10:00 AM Reminder):
+⏰ Reminder - 10:00 AM
+
+🚨 OVERDUE:
+• Team meeting - Due: 10:00 AM
+  🚨 OVERDUE!
+
+📋 UPCOMING:
+• Submit report - Due: 2:30 PM
+• Call client - Due: 4:00 PM
+• Gym - Due: 6:00 PM
+```
+
+**Advantages:**
+✅ Works 24/7 even when your phone is off
+✅ Real push notifications
+✅ No battery drain on your phone
+✅ Free hosting options available
+✅ Accessible from any device with Telegram
+
+**Keep It Running 24/7:**
+- **Replit**: Use UptimeRobot (free) to ping every 5 minutes
+- **Render/Railway**: Automatically stay alive on free tier
+- **GitHub Actions**: Schedule workflow to restart daily (advanced)
+
+#### Option 3: Convert to Mobile App (Advanced)
+Rebuild as a native mobile application.
+
+**Technologies:**
+- **React Native** / **Flutter** - Cross-platform
+- **Swift** (iOS) / **Kotlin** (Android) - Native
+- Use local notifications APIs for reminders
+
+**Pros:** Best user experience, native notifications, background execution
+**Cons:** Significant rewrite required, not just deploying existing code
+
+#### Option 4: iOS Shortcuts + Cloud Script
+For iPhone users who want minimal setup.
+
+1. Host `task_agent.py` logic on a cloud function (AWS Lambda, Google Cloud Functions)
+2. Create an iOS Shortcut that:
+   - Calls the cloud function via HTTP
+   - Displays results as notifications
+3. Set up automation to run hourly
+
+**Pros:** No app development, uses native iOS features
+**Cons:** Limited interactivity, requires iCloud/Shortcuts setup
+
+### 🔧 Quick Mobile Adaptation Guide
+
+To make the current script more mobile-friendly with minimal changes:
+
+1. **Add a simple HTTP API** using Flask:
+   ```bash
+   pip install flask
+   ```
+
+2. **Modify `task_agent.py`** to expose endpoints:
+   ```python
+   from flask import Flask, request, jsonify
+   app = Flask(__name__)
+   
+   @app.route('/add_task', methods=['POST'])
+   def add_task():
+       # Add task logic
+       return jsonify({"status": "success"})
+   
+   @app.route('/tasks', methods=['GET'])
+   def get_tasks():
+       # Return tasks as JSON
+       return jsonify(agent.tasks)
+   ```
+
+3. **Deploy to a free tier** (Replit, Glitch, Render)
+
+4. **Access via phone browser** or create simple curl commands in Shortcuts/Termux
+
+### ⚠️ Important Considerations for Mobile
+
+| Challenge | Solution |
+|-----------|----------|
+| Background execution | Use server-based approach or native app |
+| Battery drain | Avoid running Python continuously on phone |
+| No notifications | Integrate push notification service |
+| Terminal closed = no reminders | Deploy to always-on server |
+| Data persistence | Use cloud storage or sync to JSON file |
+
+### Recommended Approach
+
+**For most users:** Deploy to a free cloud server + Telegram bot integration. This gives you:
+- ✅ 24/7 operation
+- ✅ Real push notifications
+- ✅ No battery impact on phone
+- ✅ Access from any device
+- ✅ Minimal code changes (~50 lines)
+
+Would you like me to provide the complete Telegram integration code for this approach?
+
 ## Files
 
 - `task_agent.py` - Main agent script
